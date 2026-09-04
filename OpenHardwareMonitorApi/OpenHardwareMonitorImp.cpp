@@ -2,12 +2,40 @@
 
 #include "stdafx.h"
 
+#include <Windows.h>
 #include "OpenHardwareMonitorImp.h"
+#include "PawnIoRequirement.h"
 #include <vector>
 
 namespace OpenHardwareMonitorApi
 {
     static std::wstring error_message;
+
+    // Registry presence alone does not prove that the driver is accessible.
+    static void CheckPawnIo()
+    {
+        bool chinese = System::Globalization::CultureInfo::CurrentUICulture->TwoLetterISOLanguageName == L"zh";
+        ValidatePawnIoVersion(LibreHardwareMonitor::PawnIo::PawnIo::IsInstalled, LibreHardwareMonitor::PawnIo::PawnIo::Version);
+        HANDLE handle = CreateFileW(L"\\\\?\\GLOBALROOT\\Device\\PawnIO", GENERIC_READ | GENERIC_WRITE,
+            FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING, 0, nullptr);
+        if (handle == INVALID_HANDLE_VALUE)
+        {
+            int error = static_cast<int>(GetLastError());
+            throw gcnew System::ComponentModel::Win32Exception(error, chinese
+                ? L"无法访问 PawnIO 驱动。请确认已安装官方驱动，并以管理员身份运行 TrafficMonitor。"
+                : L"Cannot access the PawnIO driver. Check the official driver installation and run TrafficMonitor as administrator.");
+        }
+        CloseHandle(handle);
+    }
+
+    static bool TryGetSensorValue(ISensor^ sensor, float& value)
+    {
+        auto reading = sensor->Value;
+        if (!reading.HasValue || System::Single::IsNaN(reading.Value) || System::Single::IsInfinity(reading.Value))
+            return false;
+        value = reading.Value;
+        return true;
+    }
 
     //将CRL的String类型转换成C++的std::wstring类型
     static std::wstring ClrStringToStdWstring(System::String^ str)
@@ -28,6 +56,7 @@ namespace OpenHardwareMonitorApi
 
     std::shared_ptr<IOpenHardwareMonitor> CreateInstance()
     {
+        error_message.clear();
         std::shared_ptr<IOpenHardwareMonitor> pMonitor;
         try
         {
@@ -127,15 +156,20 @@ namespace OpenHardwareMonitorApi
     }
 
     bool COpenHardwareMonitor::GetCPUFreq(IHardware^ hardware, float& freq) {
+        freq = -1;
+        m_all_cpu_clock.clear();
         for (int i = 0; i < hardware->Sensors->Length; i++)
         {
             if (hardware->Sensors[i]->SensorType == SensorType::Clock)
             {
                 String^ name = hardware->Sensors[i]->Name;
-                if (name != L"Bus Speed")
-                    m_all_cpu_clock[ClrStringToStdWstring(name)] = Convert::ToDouble(hardware->Sensors[i]->Value);
+                float value;
+                if (name != L"Bus Speed" && TryGetSensorValue(hardware->Sensors[i], value))
+                    m_all_cpu_clock[ClrStringToStdWstring(name)] = value;
             }
         }
+        if (m_all_cpu_clock.empty())
+            return false;
         float sum{};
         for (auto i : m_all_cpu_clock)
             sum += i.second;
@@ -145,14 +179,14 @@ namespace OpenHardwareMonitorApi
 
     bool COpenHardwareMonitor::GetCpuUsage(IHardware^ hardware, float& cpu_usage)
     {
+        cpu_usage = -1;
         for (int i = 0; i < hardware->Sensors->Length; i++)
         {
             if (hardware->Sensors[i]->SensorType == SensorType::Load)
             {
                 String^ name = hardware->Sensors[i]->Name;
-                if (name != L"CPU Total")
+                if (name == L"CPU Total" && TryGetSensorValue(hardware->Sensors[i], cpu_usage))
                 {
-                    cpu_usage = Convert::ToDouble(hardware->Sensors[i]->Value);
                     return true;
                 }
             }
@@ -182,7 +216,9 @@ namespace OpenHardwareMonitorApi
             //找到温度传感器
             if (hardware->Sensors[i]->SensorType == SensorType::Temperature)
             {
-                float cur_temperture = Convert::ToDouble(hardware->Sensors[i]->Value);
+                float cur_temperture;
+                if (!TryGetSensorValue(hardware->Sensors[i], cur_temperture))
+                    continue;
                 all_temperature.push_back(cur_temperture);
                 if (hardware->Sensors[i]->Name == temperature_name) //如果找到了名称为temperature_name的温度传感器，则将温度保存到core_temperature里
                     core_temperature = cur_temperture;
@@ -222,7 +258,9 @@ namespace OpenHardwareMonitorApi
             {
                 String^ name = hardware->Sensors[i]->Name;
                 //保存每个CPU传感器的温度
-                m_all_cpu_temperature[ClrStringToStdWstring(name)] = Convert::ToDouble(hardware->Sensors[i]->Value);
+                float value;
+                if (TryGetSensorValue(hardware->Sensors[i], value))
+                    m_all_cpu_temperature[ClrStringToStdWstring(name)] = value;
             }
         }
         //计算平均温度
@@ -233,18 +271,21 @@ namespace OpenHardwareMonitorApi
                 sum += item.second;
             temperature = sum / m_all_cpu_temperature.size();
         }
-        return temperature > 0;
+        return !m_all_cpu_temperature.empty();
     }
 
     bool COpenHardwareMonitor::GetGpuUsage(IHardware^ hardware, float& gpu_usage)
     {
-        float usage_max = 0;
+        gpu_usage = -1;
+        float usage_max = -1;
         for (int i = 0; i < hardware->Sensors->Length; i++)
         {
             //找到负载
             if (hardware->Sensors[i]->SensorType == SensorType::Load)
             {
-                float cur_gpu_usage = Convert::ToDouble(hardware->Sensors[i]->Value);
+                float cur_gpu_usage;
+                if (!TryGetSensorValue(hardware->Sensors[i], cur_gpu_usage))
+                    continue;
                 if (hardware->Sensors[i]->Name == L"GPU Core")
                 {
                     gpu_usage = cur_gpu_usage;
@@ -257,19 +298,19 @@ namespace OpenHardwareMonitorApi
             }
         }
         gpu_usage = usage_max;
-        return true;
+        return usage_max >= 0;
     }
 
     bool COpenHardwareMonitor::GetHddUsage(IHardware^ hardware, float& hdd_usage)
     {
+        hdd_usage = -1;
         for (int i = 0; i < hardware->Sensors->Length; i++)
         {
             //找到负载
             if (hardware->Sensors[i]->SensorType == SensorType::Load)
             {
-                if (hardware->Sensors[i]->Name == L"Total Activity")
+                if (hardware->Sensors[i]->Name == L"Total Activity" && TryGetSensorValue(hardware->Sensors[i], hdd_usage))
                 {
-                    hdd_usage = Convert::ToDouble(hardware->Sensors[i]->Value);
                     return true;
                 }
             }
@@ -300,6 +341,8 @@ namespace OpenHardwareMonitorApi
         m_gpu_intel_usage = -1;
         m_all_hdd_temperature.clear();
         m_all_hdd_usage.clear();
+        m_all_cpu_temperature.clear();
+        m_all_cpu_clock.clear();
         m_cpu_freq = -1;
         m_cpu_usage = -1;
     }
@@ -337,6 +380,7 @@ namespace OpenHardwareMonitorApi
         error_message.clear();
         try
         {
+            CheckPawnIo();
             auto computer = MonitorGlobal::Instance()->computer;
             computer->Accept(MonitorGlobal::Instance()->updateVisitor);
             for (int i = 0; i < computer->Hardware->Count; i++)
@@ -395,6 +439,7 @@ namespace OpenHardwareMonitorApi
         }
         catch (System::Exception^ e)
         {
+            ResetAllValues();
             error_message = ClrStringToStdWstring(e->Message);
         }
     }
@@ -412,14 +457,28 @@ namespace OpenHardwareMonitorApi
 
     void MonitorGlobal::Init()
     {
+        CheckPawnIo();
         updateVisitor = gcnew UpdateVisitor();
         computer = gcnew Computer();
-        computer->Open();
+        try
+        {
+            computer->Open();
+        }
+        catch (System::Exception^)
+        {
+            try { computer->Close(); } catch (System::Exception^) { }
+            computer = nullptr;
+            throw;
+        }
     }
 
     void MonitorGlobal::UnInit()
     {
-        computer->Close();
+        if (computer != nullptr)
+        {
+            computer->Close();
+            computer = nullptr;
+        }
     }
 
 }

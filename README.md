@@ -1,3 +1,17 @@
+﻿# TrafficMonitor — PawnIO 修改版
+
+这是 [zhongyang219/TrafficMonitor](https://github.com/zhongyang219/TrafficMonitor) 的独立修改版，不是上游官方发布。保留原项目提交历史及版权声明。
+
+本版本将标准版硬件监控升级到 LibreHardwareMonitor 0.9.6，使用系统安装的 PawnIO 2.0+，提供经过验证的 x64/x86 构建；不提供 ARM64 构建。
+
+- **下载本修改版：** [Releases](https://github.com/EmiliayC/TrafficMonitor-PawnIO/releases)
+- **许可证：** 原项目 [Anti-996 License 1.0](LICENSE) / [中文文本](LICENSE_CN)，包括保留版权及许可证、劳动与就业合规和不得限制劳动者权利的条件。第三方组件适用各自许可证，见 [依赖声明](docs/hardware-runtime-notices.md)。
+- **构建与验证：** [迁移说明](docs/pawnio-migration.md) / [实测记录](docs/pawnio-validation.md)
+
+以下保留上游说明；其中官方版本下载链接指向上游，不是本修改版。
+
+---
+
 **简体中文 | [English](./README_en-us.md)**
 
 [![Badge](https://img.shields.io/badge/link-996.icu-%23FF4D5B.svg?style=flat-square)](https://996.icu/#/en_US)
@@ -137,3 +151,5 @@ TrafficMonitor支持将信息显示到任务栏。但是TrafficMonitor默认只�
 # 更新日志
 
 **[点击此处查看更新日志](./UpdateLog/update_log.md)**
+
+本分支的标准版已迁移到 LibreHardwareMonitor 0.9.6，需要系统安装 PawnIO 2.0 或更新版本。构建、完整依赖打包和验证步骤见 [PawnIO 迁移说明](docs/pawnio-migration.md)。

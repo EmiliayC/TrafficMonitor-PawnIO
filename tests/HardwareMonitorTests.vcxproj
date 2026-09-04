@@ -1,0 +1,49 @@
+﻿<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Release|x64"><Configuration>Release</Configuration><Platform>x64</Platform></ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32"><Configuration>Release</Configuration><Platform>Win32</Platform></ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{E4D75324-59BB-436B-BBE9-588C8EE82BCD}</ProjectGuid>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <PlatformToolset>v143</PlatformToolset>
+    <CLRSupport>true</CLRSupport>
+    <CharacterSet>Unicode</CharacterSet>
+    <UseDebugLibraries>false</UseDebugLibraries>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <Import Project="..\OpenHardwareMonitorApi\HardwareRuntime.targets" />
+  <PropertyGroup>
+    <OutDir>$(MSBuildThisFileDirectory)bin\$(Platform)\</OutDir>
+    <IntDir>$(MSBuildThisFileDirectory)obj\$(Platform)\</IntDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(MSBuildThisFileDirectory)..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>OPENHARDWAREMONITOR_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ExceptionHandling>Async</ExceptionHandling>
+
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="LibreHardwareMonitorLib"><HintPath>$(HardwareRuntimeDir)LibreHardwareMonitorLib.dll</HintPath></Reference>
+    <Reference Include="SensorFixtures"><HintPath>$(OutDir)SensorFixtures.dll</HintPath></Reference>
+    <ClCompile Include="HardwareMonitorTests.cpp" />
+    <ClCompile Include="..\OpenHardwareMonitorApi\OpenHardwareMonitorImp.cpp" />
+    <ClCompile Include="..\OpenHardwareMonitorApi\UpdateVisitor.cpp" />
+  </ItemGroup>
+  <Target Name="BuildSensorFixtures" BeforeTargets="ResolveAssemblyReferences" DependsOnTargets="RestoreHardwareRuntime">
+    <MakeDir Directories="$(OutDir)" />
+    <Exec Command="&quot;$(SystemRoot)\Microsoft.NET\Framework\v4.0.30319\csc.exe&quot; /nologo /target:library /out:&quot;$(OutDir)SensorFixtures.dll&quot; /reference:&quot;$(HardwareRuntimeDir)LibreHardwareMonitorLib.dll&quot; /reference:&quot;$(HardwareRuntimeDir)HidSharp.dll&quot; &quot;$(MSBuildThisFileDirectory)SensorFixtures.cs&quot;" />
+  </Target>
+  <Target Name="CopyTestConfig" AfterTargets="CopyHardwareRuntime">
+    <Copy SourceFiles="$(OutDir)TrafficMonitor.exe.config" DestinationFiles="$(TargetPath).config" />
+  </Target>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+</Project>

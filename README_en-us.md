@@ -1,3 +1,17 @@
+﻿# TrafficMonitor — PawnIO variant
+
+An independently maintained derivative of [zhongyang219/TrafficMonitor](https://github.com/zhongyang219/TrafficMonitor), not an official upstream release. Original history, authorship and copyright notices are retained.
+
+The standard edition now uses LibreHardwareMonitor 0.9.6 with system-installed PawnIO 2.0+. Tested x64/x86 builds are available; no ARM64 build is provided.
+
+- **Download this variant:** [Releases](https://github.com/EmiliayC/TrafficMonitor-PawnIO/releases)
+- **License:** the original [Anti-996 License 1.0](LICENSE), including its notice-preservation and labor/employment conditions. Third-party components retain their respective licenses; see [dependency notices](docs/hardware-runtime-notices.md).
+- **Build and validation:** [migration guide](docs/pawnio-migration.md) / [validation record](docs/pawnio-validation.md)
+
+The original upstream documentation follows. Its official download links refer to upstream releases, not this variant.
+
+---
+
 **[简体中文](./README.md) | English**
 
 [![Badge](https://img.shields.io/badge/link-996.icu-%23FF4D5B.svg?style=flat-square)](https://996.icu/#/en_US)
@@ -144,3 +158,4 @@ It should also be noted that the temperature monitoring function is turned off b
 
 **[Click here to view the update log.](./UpdateLog/update_log_en-us.md)**
 
+This branch's standard edition uses LibreHardwareMonitor 0.9.6 and requires system-installed PawnIO 2.0 or later. See the [migration guide](docs/pawnio-migration.md) for build, deployment and verification instructions.

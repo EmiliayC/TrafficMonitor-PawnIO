@@ -1,0 +1,33 @@
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Release|x64"><Configuration>Release</Configuration><Platform>x64</Platform></ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32"><Configuration>Release</Configuration><Platform>Win32</Platform></ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{949B8A73-74DD-4181-A5DD-03E4771ABAD6}</ProjectGuid>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType><PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet><UseDebugLibraries>false</UseDebugLibraries>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <PropertyGroup>
+    <OutDir>$(MSBuildThisFileDirectory)bin\$(Platform)\native\</OutDir>
+    <IntDir>$(MSBuildThisFileDirectory)obj\$(Platform)\native\</IntDir>
+    <AppPackageDir Condition="'$(Platform)' == 'Win32'">$(MSBuildThisFileDirectory)..\Bin\Release\</AppPackageDir>
+    <AppPackageDir Condition="'$(Platform)' == 'x64'">$(MSBuildThisFileDirectory)..\Bin\x64\Release\</AppPackageDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile><AdditionalIncludeDirectories>$(MSBuildThisFileDirectory)..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories></ClCompile>
+    <Link><AdditionalDependencies>$(AppPackageDir)OpenHardwareMonitorApi.lib;%(AdditionalDependencies)</AdditionalDependencies></Link>
+  </ItemDefinitionGroup>
+  <ItemGroup><ClCompile Include="NativeHostSmoke.cpp" /></ItemGroup>
+  <Target Name="StageNativeHostRuntime" AfterTargets="Build">
+    <ItemGroup><AppRuntime Include="$(AppPackageDir)*.dll" /></ItemGroup>
+    <Copy SourceFiles="@(AppRuntime)" DestinationFolder="$(OutDir)" />
+    <Copy SourceFiles="$(AppPackageDir)TrafficMonitor.exe.config" DestinationFiles="$(TargetPath).config" />
+  </Target>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+</Project>

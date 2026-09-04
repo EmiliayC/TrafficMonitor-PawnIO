@@ -77,6 +77,7 @@
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <Import Project="HardwareRuntime.targets" />
   <ImportGroup Label="ExtensionSettings">
   </ImportGroup>
   <ImportGroup Label="Shared">
@@ -197,7 +198,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <Reference Include="LibreHardwareMonitorLib">
-      <HintPath>LibreHardwareMonitorLib.dll</HintPath>
+      <HintPath>$(HardwareRuntimeDir)LibreHardwareMonitorLib.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />
@@ -207,6 +208,7 @@
     <ClInclude Include="..\include\OpenHardwareMonitor\OpenHardwareMonitorApi.h" />
     <ClInclude Include="..\include\OpenHardwareMonitor\OpenHardwareMonitorGlobal.h" />
     <ClInclude Include="OpenHardwareMonitorImp.h" />
+    <ClInclude Include="PawnIoRequirement.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="Stdafx.h" />
     <ClInclude Include="UpdateVisitor.h" />

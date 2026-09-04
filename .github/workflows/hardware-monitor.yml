@@ -1,0 +1,74 @@
+name: Hardware monitor migration
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'OpenHardwareMonitorApi/**'
+      - 'tests/**'
+      - 'scripts/**'
+      - '.github/workflows/hardware-monitor.yml'
+      - 'TrafficMonitor/**'
+  pull_request:
+    paths:
+      - 'OpenHardwareMonitorApi/**'
+      - 'tests/**'
+      - 'scripts/**'
+      - '.github/workflows/hardware-monitor.yml'
+      - 'TrafficMonitor/**'
+
+jobs:
+  standard:
+    runs-on: windows-2022
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: x64
+            vcPlatform: x64
+            output: Bin/x64/Release
+          - platform: x86
+            vcPlatform: Win32
+            output: Bin/Release
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+      - uses: microsoft/setup-msbuild@v2
+      - name: Build standard edition
+        run: msbuild TrafficMonitor.sln /m /nr:false /p:Configuration=Release /p:Platform=${{ matrix.platform }}
+      - name: Verify release dependencies and architecture
+        run: ./scripts/Verify-HardwarePackage.ps1 -PackagePath '${{ matrix.output }}' -Platform '${{ matrix.platform }}'
+      - name: Build sensor regression tests
+        run: msbuild tests/HardwareMonitorTests.vcxproj /nr:false /p:Configuration=Release /p:Platform=${{ matrix.vcPlatform }}
+      - name: Run sensor regression tests without hardware
+        run: ./tests/bin/${{ matrix.vcPlatform }}/HardwareMonitorTests.exe
+      - name: Verify missing driver diagnostics
+        run: ./tests/bin/${{ matrix.vcPlatform }}/HardwareMonitorTests.exe --expect-unavailable
+      - name: Build native host integration test
+        run: msbuild tests/NativeHostSmoke.vcxproj /nr:false /p:Configuration=Release /p:Platform=${{ matrix.vcPlatform }}
+      - name: Verify native host and bridge without a driver
+        run: ./tests/bin/${{ matrix.vcPlatform }}/native/NativeHostSmoke.exe --expect-unavailable
+      - name: Include distribution notices and resources
+        shell: pwsh
+        run: |
+          $output = '${{ matrix.output }}'
+          Copy-Item LICENSE,LICENSE_CN,NOTICE.md,docs/hardware-runtime-notices.md,docs/pawnio-migration.md,docs/pawnio-validation.md -Destination $output
+          Copy-Item docs/licenses,TrafficMonitor/skins,TrafficMonitor/language -Destination $output -Recurse -Force
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TrafficMonitor-PawnIO-${{ matrix.platform }}
+          path: |
+            ${{ matrix.output }}/TrafficMonitor.exe
+            ${{ matrix.output }}/*.dll
+            ${{ matrix.output }}/TrafficMonitor.exe.config
+            ${{ matrix.output }}/hardware-runtime-manifest.json
+            ${{ matrix.output }}/LICENSE
+            ${{ matrix.output }}/LICENSE_CN
+            ${{ matrix.output }}/NOTICE.md
+            ${{ matrix.output }}/hardware-runtime-notices.md
+            ${{ matrix.output }}/pawnio-migration.md
+            ${{ matrix.output }}/pawnio-validation.md
+            ${{ matrix.output }}/licenses/**
+            ${{ matrix.output }}/skins/**
+            ${{ matrix.output }}/language/**

@@ -1046,4 +1046,16 @@
       <UserProperties RESOURCE_FILE="TrafficMonitor.rc" />
     </VisualStudio>
   </ProjectExtensions>
+  <Target Name="CopyArm64EcHardwareRuntime" AfterTargets="Build" Condition="'$(Platform)' == 'ARM64EC' and ('$(Configuration)' == 'Release' or '$(Configuration)' == 'Debug')">
+    <PropertyGroup>
+      <HardwareBridgeDir>$(MSBuildThisFileDirectory)..\Bin\x64\$(Configuration)\</HardwareBridgeDir>
+      <HardwareDependenciesDir>$(MSBuildThisFileDirectory)..\OpenHardwareMonitorApi\RuntimeDependencies\bin\$(Configuration)\net472\win-x64\</HardwareDependenciesDir>
+    </PropertyGroup>
+    <ItemGroup>
+      <ArmHardwareFile Include="$(HardwareDependenciesDir)*.dll" Exclude="$(HardwareDependenciesDir)RuntimeDependencies.dll" />
+      <ArmHardwareFile Include="$(HardwareBridgeDir)OpenHardwareMonitorApi.dll" />
+    </ItemGroup>
+    <Copy SourceFiles="@(ArmHardwareFile)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(HardwareBridgeDir)TrafficMonitor.exe.config" DestinationFiles="$(OutDir)TrafficMonitor.exe.config" SkipUnchangedFiles="true" />
+  </Target>
 </Project>

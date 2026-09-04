@@ -1482,10 +1482,13 @@ void CTrafficMonitorDlg::DoMonitorAcquisition()
 
         getHardwareInfo();
         auto monitor_error_message{ OpenHardwareMonitorApi::GetErrorMessage() };
-        if (!monitor_error_message.empty())
+        // Report each failure once until a successful sample or a different error.
+        static std::wstring last_monitor_error;
+        if (!monitor_error_message.empty() && monitor_error_message != last_monitor_error)
         {
             AfxMessageBox(monitor_error_message.c_str(), MB_ICONERROR | MB_OK);
         }
+        last_monitor_error = monitor_error_message;
         //theApp.m_cpu_temperature = theApp.m_pMonitor->CpuTemperature();
         theApp.m_gpu_temperature = theApp.m_pMonitor->GpuTemperature();
         //theApp.m_hdd_temperature = theApp.m_pMonitor->HDDTemperature();

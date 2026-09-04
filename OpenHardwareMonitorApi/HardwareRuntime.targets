@@ -1,0 +1,18 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <HardwareRuntimeId Condition="'$(Platform)' == 'Win32'">win-x86</HardwareRuntimeId>
+    <HardwareRuntimeId Condition="'$(Platform)' != 'Win32'">win-x64</HardwareRuntimeId>
+    <HardwareRuntimeProject>$(MSBuildThisFileDirectory)RuntimeDependencies\RuntimeDependencies.csproj</HardwareRuntimeProject>
+    <HardwareRuntimeDir>$(MSBuildThisFileDirectory)RuntimeDependencies\bin\$(Configuration)\net472\$(HardwareRuntimeId)\</HardwareRuntimeDir>
+  </PropertyGroup>
+  <Target Name="RestoreHardwareRuntime" BeforeTargets="ResolveAssemblyReferences">
+    <Exec Command="dotnet build &quot;$(HardwareRuntimeProject)&quot; --configuration &quot;$(Configuration)&quot; --runtime $(HardwareRuntimeId) -p:RestoreLockedMode=true -p:Platform=AnyCPU --nologo" />
+  </Target>
+  <Target Name="CopyHardwareRuntime" AfterTargets="Build">
+    <ItemGroup>
+      <HardwareRuntimeFile Include="$(HardwareRuntimeDir)*.dll;$(HardwareRuntimeDir)*.xml" Exclude="$(HardwareRuntimeDir)RuntimeDependencies.*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(HardwareRuntimeFile)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(HardwareRuntimeDir)RuntimeDependencies.dll.config" DestinationFiles="$(OutDir)TrafficMonitor.exe.config" SkipUnchangedFiles="true" />
+  </Target>
+</Project>
