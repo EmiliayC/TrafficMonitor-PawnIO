@@ -20,7 +20,9 @@ The existing upstream Lite release workflow remains independent of this dependen
   application skins/language assets. Do not replace only LibreHardwareMonitorLib.dll.
 - Use a clean release directory. Do not mix older standard-edition files or a plugin's
   old copy of LibreHardwareMonitor with this runtime. This patch does not migrate
-  the separate TrafficMonitorPlugins repository.
+  the separate TrafficMonitorPlugins repository. `RAMSPDToolkit-NDD.dll` is deliberately
+  excluded from the package: TrafficMonitor does not enable LHM memory/SPD monitoring,
+  and that optional toolkit retains obsolete WinRing0 compatibility names in metadata.
 - Missing, outdated or inaccessible PawnIO prevents hardware-monitor initialization
   and gives an installation/access message. Network and other native monitoring are
   independent. During sampling, access failure clears the current hardware readings;
@@ -90,19 +92,20 @@ runs beside DLLs/config copied from the application package. It checks the nativ
 host/CLR boundary as well as sampling and shutdown.
 
 `Verify-HardwarePackage.ps1` checks executable/bridge/LHM architecture, version,
-exact dependency hashes, CLR configuration, duplicate LHM copies and driver payloads.
+exact shipped-dependency hashes, CLR configuration, duplicate LHM copies, forbidden
+`RAMSPDToolkit-NDD.dll`, all WinRing0 binary strings and driver payloads.
 It emits `hardware-runtime-manifest.json`. `Test-DriverResources.ps1` uses .NET
 Framework reflection-only inspection, without executing the inspected assemblies.
 
-### RAMSPDToolkit-NDD audit
+### RAMSPDToolkit-NDD exclusion
 
-The pinned NDD variant retains an `IWinRing0Driver` interface and a `WinRing0` enum
-member. Those strings are not a driver. At upstream commit
-`3b47b960e0830fef344624ad5e389675d5f0a1ce`, `RELEASE_NDD` excludes the OLS driver
-implementation and embedded driver payloads. Verification requires the exact
-restored NDD binary hash, no embedded resources and no OLS implementation; actual
-WinRing0 filenames/implementation markers remain forbidden. LHM must have PawnIO
-module resources and no old Ring0 implementation.
+LibreHardwareMonitor 0.9.6 declares `RAMSPDToolkit-NDD` as a compile-time/transitive
+package. TrafficMonitor never enables LHM memory/SPD monitoring, so the build restores
+it for deterministic compilation but excludes its DLL from the published runtime.
+This removes its compatibility-only `IWinRing0Driver` and `WinRing0` metadata strings
+as well as any ambiguity for security scanners. Package verification rejects the DLL
+by name and rejects `WinRing0` strings in every shipped EXE or DLL. LHM must still
+contain PawnIO modules and no old Ring0 implementation.
 
 Sources:
 - [LHM 0.9.6 package project](https://github.com/LibreHardwareMonitor/LibreHardwareMonitor/blob/v0.9.6/LibreHardwareMonitorLib/LibreHardwareMonitorLib.csproj)

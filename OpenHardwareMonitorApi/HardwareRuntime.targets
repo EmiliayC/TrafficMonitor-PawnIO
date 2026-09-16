@@ -10,8 +10,11 @@
   </Target>
   <Target Name="CopyHardwareRuntime" AfterTargets="Build">
     <ItemGroup>
-      <HardwareRuntimeFile Include="$(HardwareRuntimeDir)*.dll;$(HardwareRuntimeDir)*.xml" Exclude="$(HardwareRuntimeDir)RuntimeDependencies.*" />
+      <HardwareRuntimeFile Include="$(HardwareRuntimeDir)*.dll;$(HardwareRuntimeDir)*.xml" Exclude="$(HardwareRuntimeDir)RuntimeDependencies.*;$(HardwareRuntimeDir)RAMSPDToolkit-NDD.dll" />
     </ItemGroup>
+    <!-- TrafficMonitor never enables LHM memory/SPD monitoring. Do not ship the NDD toolkit,
+         whose compatibility-only metadata still contains WinRing0 names. -->
+    <Delete Files="$(OutDir)RAMSPDToolkit-NDD.dll" />
     <Copy SourceFiles="@(HardwareRuntimeFile)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
     <Copy SourceFiles="$(HardwareRuntimeDir)RuntimeDependencies.dll.config" DestinationFiles="$(OutDir)TrafficMonitor.exe.config" SkipUnchangedFiles="true" />
   </Target>
