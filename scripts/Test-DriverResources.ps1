@@ -7,19 +7,13 @@ if ($PSVersionTable.PSEdition -eq 'Core') {
     exit 0
 }
 $package = (Resolve-Path -LiteralPath $PackagePath).Path
-foreach ($name in 'LibreHardwareMonitorLib.dll','RAMSPDToolkit-NDD.dll') {
+$ramSpdPath = Join-Path $package 'RAMSPDToolkit-NDD.dll'
+if (Test-Path -LiteralPath $ramSpdPath) { throw 'RAMSPDToolkit-NDD.dll is not allowed in the release package.' }
+foreach ($name in 'LibreHardwareMonitorLib.dll') {
     $assembly = [Reflection.Assembly]::ReflectionOnlyLoadFrom((Join-Path $package $name))
     $resources = @($assembly.GetManifestResourceNames())
     if ($resources -match '(?i)WinRing|\.sys($|\.)') { throw "Embedded legacy driver in $name" }
-    if ($name -eq 'LibreHardwareMonitorLib.dll') {
-        if ($assembly.GetType('LibreHardwareMonitor.Hardware.Ring0',$false)) { throw 'Legacy LHM Ring0 implementation is present.' }
-        if (!($resources -match 'PawnIo')) { throw 'LHM PawnIO modules are absent.' }
-    } else {
-        # NDD retains IWinRing0Driver and enum names for API compatibility, but
-        # RELEASE_NDD excludes OLS implementation and all embedded driver files.
-        # Upstream commit: 3b47b960e0830fef344624ad5e389675d5f0a1ce.
-        if ($assembly.GetType('RAMSPDToolkit.Windows.Driver.Implementations.WinRing0.OLS',$false)) { throw 'RAMSPDToolkit includes an actual WinRing0 implementation.' }
-        if ($resources.Count -ne 0) { throw 'Unexpected resources in the audited RAMSPDToolkit-NDD variant.' }
-    }
+    if ($assembly.GetType('LibreHardwareMonitor.Hardware.Ring0',$false)) { throw 'Legacy LHM Ring0 implementation is present.' }
+    if (!($resources -match 'PawnIo')) { throw 'LHM PawnIO modules are absent.' }
     Write-Output "$name : checked resources and legacy driver implementation types."
 }
