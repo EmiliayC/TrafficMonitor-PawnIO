@@ -41,7 +41,12 @@ if ($Platform -eq 'ARM64EC') {
 $version = [Diagnostics.FileVersionInfo]::GetVersionInfo((Join-Path $package 'LibreHardwareMonitorLib.dll')).FileVersion
 if ($version -ne '0.9.6.0') { throw "Unexpected LibreHardwareMonitor version: $version" }
 
-$files = @(Get-ChildItem -LiteralPath $runtime -Filter '*.dll' | Where-Object Name -ne 'RuntimeDependencies.dll')
+$excludedRuntimeFiles = @('RuntimeDependencies.dll', 'RAMSPDToolkit-NDD.dll')
+$files = @(Get-ChildItem -LiteralPath $runtime -Filter '*.dll' | Where-Object Name -notin $excludedRuntimeFiles)
+$ramSpdPath = Join-Path $package 'RAMSPDToolkit-NDD.dll'
+if (Test-Path -LiteralPath $ramSpdPath) {
+    throw 'RAMSPDToolkit-NDD.dll must not be shipped: its compatibility metadata retains WinRing0 names.'
+}
 $manifest = foreach ($source in $files) {
     $destination = Join-Path $package $source.Name
     $hash = (Get-FileHash -LiteralPath $source.FullName -Algorithm SHA256).Hash
@@ -58,9 +63,9 @@ foreach ($file in Get-ChildItem -LiteralPath $package -Recurse -File) {
     if ($file.Name -match '(?i)WinRing0|OpenHardwareMonitorLib|\.sys$') { throw "Legacy or bundled driver found: $($file.FullName)" }
     if ($file.Extension -eq '.dll' -or $file.Extension -eq '.exe') {
         $bytes = [IO.File]::ReadAllBytes($file.FullName)
-        # The hash-verified NDD variant has harmless interface/enum names.
-        # Still reject actual WinRing0 filenames and implementation namespaces.
-        $pattern = if ($file.Name -eq 'RAMSPDToolkit-NDD.dll') { '(?i)WinRing0(x64)?\.(sys|dll|gz)|Implementations\.WinRing0' } else { '(?i)WinRing0' }
+        # No published binary receives an exception: even compatibility-only
+        # WinRing0 names are forbidden from the release package.
+        $pattern = '(?i)WinRing0'
         if ([Text.Encoding]::ASCII.GetString($bytes) -match $pattern -or [Text.Encoding]::Unicode.GetString($bytes) -match $pattern) {
             throw "WinRing0 implementation or payload marker found in: $($file.FullName)"
         }
@@ -72,4 +77,4 @@ foreach ($file in Get-ChildItem -LiteralPath $package -Recurse -File) {
 & (Join-Path $PSScriptRoot 'Test-DriverResources.ps1') -PackagePath $package
 [ordered]@{ platform=$Platform; runtime=$rid; libreHardwareMonitor=$version; dependencies=$manifest } |
     ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $package 'hardware-runtime-manifest.json') -Encoding UTF8
-Write-Output "Verified $Platform package: LibreHardwareMonitor $version, $($files.Count) runtime DLLs, CLR config, no WinRing0 implementations/payloads or bundled kernel drivers."
+Write-Output "Verified $Platform package: LibreHardwareMonitor $version, $($files.Count) runtime DLLs, CLR config, no WinRing0 names/payloads, RAMSPDToolkit runtime, or bundled kernel drivers."
