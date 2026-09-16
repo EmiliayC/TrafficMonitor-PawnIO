@@ -8,7 +8,7 @@ The standard edition uses the following locked NuGet packages. Source and licens
 | BlackSharp.Core | 1.0.7 | MPL-2.0 | https://github.com/Blacktempel/BlackSharp |
 | DiskInfoToolkit | 1.1.2 | MPL-2.0 | https://github.com/Blacktempel/DiskInfoToolkit |
 | HidSharp | 2.6.4 | [license](licenses/HidSharp-2.6.4.txt) | https://software.seekye.com/hidsharp |
-| RAMSPDToolkit-NDD | 1.4.2 | MPL-2.0 | https://github.com/Blacktempel/RAMSPDToolkit |
+| RAMSPDToolkit-NDD | 1.4.2 (restore/build only; not distributed) | MPL-2.0 | https://github.com/Blacktempel/RAMSPDToolkit |
 | System.Buffers | 4.6.1 | MIT | https://github.com/dotnet/maintenance-packages |
 | System.CodeDom | 10.0.2 | MIT | https://dot.net/ |
 | System.Management | 10.0.2 | MIT | https://dot.net/ |
@@ -19,7 +19,7 @@ The standard edition uses the following locked NuGet packages. Source and licens
 | System.Security.Principal.Windows | 5.0.0 | MIT | https://github.com/dotnet/runtime |
 | System.Threading.AccessControl | 10.0.3 | MIT | https://dot.net/ |
 
-LibreHardwareMonitor and RAMSPDToolkit-NDD are distributed under MPL-2.0. Their unmodified binaries are restored from the official NuGet feed. PawnIO is installed separately from https://pawnio.eu/ and is not bundled.
+LibreHardwareMonitor is distributed under MPL-2.0. RAMSPDToolkit-NDD is restored from the official NuGet feed only as a transitive build input and is excluded from release packages because TrafficMonitor does not enable memory/SPD monitoring. PawnIO is installed separately from https://pawnio.eu/ and is not bundled.
 
 Package pages and license files are available at https://www.nuget.org/packages/ using the package IDs and versions above.
 
@@ -27,7 +27,7 @@ License texts: [MPL-2.0](licenses/MPL-2.0.txt), [Microsoft .NET MIT](licenses/do
 
 ## Source availability for MPL-2.0 components
 
-The following unmodified libraries are distributed under MPL-2.0. Their corresponding
+The following unmodified libraries are used by the locked build; RAMSPDToolkit-NDD is not included in the published package. Their corresponding
 source code is available at the exact upstream revisions below under MPL-2.0.
 The Anti-996 terms applying to TrafficMonitor do not replace or restrict recipients'
 rights to these MPL-covered source files.
