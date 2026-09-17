@@ -1,0 +1,104 @@
+name: Publish PawnIO release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag
+        required: true
+        default: pawnio-v0.1.1
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/release.yml'
+
+permissions:
+  contents: write
+
+env:
+  RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || 'pawnio-v0.1.1' }}
+
+jobs:
+  build:
+    runs-on: windows-2022
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: x64
+            output: Bin/x64/Release
+          - platform: x86
+            output: Bin/Release
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+      - uses: microsoft/setup-msbuild@v2
+      - name: Build standard edition
+        run: msbuild TrafficMonitor.sln /m /nr:false /p:Configuration=Release /p:Platform=${{ matrix.platform }}
+      - name: Verify package
+        shell: pwsh
+        run: ./scripts/Verify-HardwarePackage.ps1 -PackagePath '${{ matrix.output }}' -Platform '${{ matrix.platform }}'
+      - name: Add release documentation
+        shell: pwsh
+        run: |
+          $output = '${{ matrix.output }}'
+          Copy-Item LICENSE,LICENSE_CN,NOTICE.md,docs/hardware-runtime-notices.md,docs/pawnio-migration.md,docs/pawnio-validation.md -Destination $output
+          Copy-Item docs/licenses,TrafficMonitor/skins,TrafficMonitor/language -Destination $output -Recurse -Force
+      - name: Create ZIP
+        shell: pwsh
+        run: Compress-Archive -Path '${{ matrix.output }}/*' -DestinationPath 'TrafficMonitor-PawnIO-${{ matrix.platform }}.zip' -CompressionLevel Optimal
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.platform }}
+          path: TrafficMonitor-PawnIO-${{ matrix.platform }}.zip
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          path: release
+          merge-multiple: true
+      - name: Generate checksums and notes
+        shell: bash
+        run: |
+          cd release
+          sha256sum TrafficMonitor-PawnIO-x64.zip TrafficMonitor-PawnIO-x86.zip > SHA256SUMS.txt
+          cat > RELEASE_NOTES.md <<'EOF'
+          ## TrafficMonitor PawnIO v0.1.1
+
+          基于 zhongyang219/TrafficMonitor 的独立修改版；不是上游官方发布。
+
+          ### 本次更新
+          - 从发布包中彻底移除 `RAMSPDToolkit-NDD.dll`。
+          - 消除该依赖保留的 `IWinRing0Driver` / `WinRing0` 兼容性元数据字符串。
+          - 发布验证现在禁止任何已发布 EXE/DLL 包含 `WinRing0` 字符串，且不再提供例外。
+          - 保持 LibreHardwareMonitor 0.9.6 + 系统 PawnIO 2.0+ 架构。
+          - x64 与 x86 构建、依赖检查、传感器回归测试及原生桥接测试均通过。
+
+          ### 下载
+          - `TrafficMonitor-PawnIO-x64.zip`：64 位 Windows。
+          - `TrafficMonitor-PawnIO-x86.zip`：32 位进程构建。
+          - `SHA256SUMS.txt`：下载文件校验值。
+
+          请完整解压，并安装官方 [PawnIO 2.0+](https://pawnio.eu/)，以管理员身份运行。PawnIO 驱动不包含在压缩包内。
+          EOF
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$RELEASE_TAG" \
+            --repo "${{ github.repository }}" \
+            --target "${{ github.sha }}" \
+            --title "TrafficMonitor PawnIO v0.1.1 — WinRing0 residue removed" \
+            --notes-file release/RELEASE_NOTES.md \
+            release/TrafficMonitor-PawnIO-x64.zip \
+            release/TrafficMonitor-PawnIO-x86.zip \
+            release/SHA256SUMS.txt
