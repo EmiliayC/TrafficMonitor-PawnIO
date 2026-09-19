@@ -329,6 +329,7 @@ struct TaskBarSettingData : public PublicSettingData
     void ValidWindowOffsetTop();
     void ValidWindowOffsetLeft();
     bool avoid_overlap_with_widgets{ false };   //避免与右侧小组件重叠
+    bool avoid_overlap_with_taskbar_buttons{ true }; //Windows11任务栏按钮空间不足时将窗口移到任务栏上方
     int taskbar_left_space_win11{};         //Windows11下，任务栏小工具的宽度
     int taskbar_right_space_win11{};        //Windows11下，任务栏窗口距离任务栏右侧的宽度（仅当无法获取到任务栏TrayNotifyWnd窗口的位置时有效）
 

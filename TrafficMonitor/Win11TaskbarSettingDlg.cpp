@@ -79,6 +79,7 @@ BOOL CWin11TaskbarSettingDlg::OnInitDialog()
 
     EnableDlgCtrl(IDC_TASKBAR_WND_SNAP_CHECK, CTaskBarDlg::IsTaskbarCloseToIconEnable(m_data.tbar_wnd_on_left));
     CheckDlgButton(IDC_TASKBAR_WND_SNAP_CHECK, m_data.tbar_wnd_snap);
+    CheckDlgButton(IDC_AVOID_OVERLAP_TASKBAR_BUTTONS_CHECK, m_data.avoid_overlap_with_taskbar_buttons);
     m_window_offset_top_edit.SetRange(-20, 20);
     m_window_offset_top_edit.SetValue(m_data.window_offset_top);
     m_window_offset_left_edit.SetRange(-800, 800);
@@ -97,6 +98,7 @@ BOOL CWin11TaskbarSettingDlg::OnInitDialog()
 void CWin11TaskbarSettingDlg::OnOK()
 {
     m_data.tbar_wnd_snap = (IsDlgButtonChecked(IDC_TASKBAR_WND_SNAP_CHECK) != 0);
+    m_data.avoid_overlap_with_taskbar_buttons = (IsDlgButtonChecked(IDC_AVOID_OVERLAP_TASKBAR_BUTTONS_CHECK) != 0);
 
     m_data.window_offset_top = m_window_offset_top_edit.GetValue();
     m_data.ValidWindowOffsetTop();
@@ -120,4 +122,5 @@ void CWin11TaskbarSettingDlg::OnBnClickedRestoreDefaultButton()
     m_window_offset_top_edit.SetValue(0);
     m_window_offset_left_edit.SetValue(0);
     m_widgets_width_edit.SetValue(160);
+    CheckDlgButton(IDC_AVOID_OVERLAP_TASKBAR_BUTTONS_CHECK, BST_CHECKED);
 }

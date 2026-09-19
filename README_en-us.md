@@ -7,6 +7,7 @@ The standard edition now uses LibreHardwareMonitor 0.9.6 with system-installed P
 - **Download this variant:** [Releases](https://github.com/EmiliayC/TrafficMonitor-PawnIO/releases)
 - **License:** the original [Anti-996 License 1.0](LICENSE), including its notice-preservation and labor/employment conditions. Third-party components retain their respective licenses; see [dependency notices](docs/hardware-runtime-notices.md).
 - **Build and validation:** [migration guide](docs/pawnio-migration.md) / [validation record](docs/pawnio-validation.md)
+- **Windows 11 taskbar compatibility:** [design and limitations](docs/windows11-taskbar-compatibility.md)
 
 The original upstream documentation follows. Its official download links refer to upstream releases, not this variant.
 

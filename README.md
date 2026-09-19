@@ -7,6 +7,7 @@
 - **下载本修改版：** [Releases](https://github.com/EmiliayC/TrafficMonitor-PawnIO/releases)
 - **许可证：** 原项目 [Anti-996 License 1.0](LICENSE) / [中文文本](LICENSE_CN)，包括保留版权及许可证、劳动与就业合规和不得限制劳动者权利的条件。第三方组件适用各自许可证，见 [依赖声明](docs/hardware-runtime-notices.md)。
 - **构建与验证：** [迁移说明](docs/pawnio-migration.md) / [实测记录](docs/pawnio-validation.md)
+- **Windows 11 任务栏兼容：** [设计与限制说明](docs/windows11-taskbar-compatibility.md)
 
 以下保留上游说明；其中官方版本下载链接指向上游，不是本修改版。
 
