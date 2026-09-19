@@ -160,3 +160,5 @@ It should also be noted that the temperature monitoring function is turned off b
 **[Click here to view the update log.](./UpdateLog/update_log_en-us.md)**
 
 This branch's standard edition uses LibreHardwareMonitor 0.9.6 and requires system-installed PawnIO 2.0 or later. See the [migration guide](docs/pawnio-migration.md) for build, deployment and verification instructions.
+
+See the [Windows 11 compatibility audit](docs/windows11-compatibility-audit.md) for taskbar, DPI, multi-monitor, privilege, and notification-area findings.

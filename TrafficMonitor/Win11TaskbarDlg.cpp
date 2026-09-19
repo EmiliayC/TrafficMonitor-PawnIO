@@ -8,30 +8,61 @@ using Microsoft::WRL::ComPtr;
 
 namespace
 {
-    bool IsTaskbarApplicationButton(IUIAutomationElement* element)
+    enum class TaskbarElementKind
+    {
+        None,
+        ApplicationButton,
+        StartButton,
+        NotificationArea
+    };
+
+    TaskbarElementKind GetTaskbarElementKind(IUIAutomationElement* element)
     {
         BSTR automation_id{};
         BSTR class_name{};
         const HRESULT id_result = element->get_CurrentAutomationId(&automation_id);
         const HRESULT class_result = element->get_CurrentClassName(&class_name);
 
-        const bool is_app_id = SUCCEEDED(id_result) && automation_id != nullptr
-            && wcsncmp(automation_id, L"Appid:", 6) == 0;
-        const bool is_task_list_button = SUCCEEDED(class_result) && class_name != nullptr
-            && wcsstr(class_name, L"TaskListButton") != nullptr;
-        const bool is_overflow_button =
-            (SUCCEEDED(id_result) && automation_id != nullptr && wcsstr(automation_id, L"Overflow") != nullptr)
-            || (SUCCEEDED(class_result) && class_name != nullptr && wcsstr(class_name, L"Overflow") != nullptr);
+        const bool has_id = SUCCEEDED(id_result) && automation_id != nullptr;
+        const bool has_class = SUCCEEDED(class_result) && class_name != nullptr;
+        TaskbarElementKind kind{ TaskbarElementKind::None };
+        if ((has_id && wcsncmp(automation_id, L"Appid:", 6) == 0)
+            || (has_class && wcsstr(class_name, L"TaskListButton") != nullptr)
+            || (has_id && wcsstr(automation_id, L"Overflow") != nullptr)
+            || (has_class && wcsstr(class_name, L"Overflow") != nullptr))
+        {
+            kind = TaskbarElementKind::ApplicationButton;
+        }
+        else if (has_id && wcscmp(automation_id, L"StartButton") == 0)
+        {
+            kind = TaskbarElementKind::StartButton;
+        }
+        else if ((has_id && (wcscmp(automation_id, L"SystemTrayIcon") == 0
+            || wcscmp(automation_id, L"NotifyItemIcon") == 0))
+            || (has_class && wcsstr(class_name, L"SystemTray") != nullptr))
+        {
+            kind = TaskbarElementKind::NotificationArea;
+        }
 
         ::SysFreeString(automation_id);
         ::SysFreeString(class_name);
-        return is_app_id || is_task_list_button || is_overflow_button;
+        return kind;
+    }
+
+    void AddToBounds(CRect& bounds, const CRect& element_rect)
+    {
+        if (bounds.IsRectEmpty())
+            bounds = element_rect;
+        else
+            bounds.UnionRect(&bounds, &element_rect);
     }
 }
 
-bool CWin11TaskbarDlg::GetTaskbarButtonBounds(CRect& bounds) const
+bool CWin11TaskbarDlg::GetTaskbarLayout(CRect& button_bounds, CRect& start_bounds, CRect& notify_bounds) const
 {
-    bounds.SetRectEmpty();
+    button_bounds.SetRectEmpty();
+    start_bounds.SetRectEmpty();
+    notify_bounds.SetRectEmpty();
 
     ComPtr<IUIAutomation> automation;
     if (FAILED(::CoCreateInstance(__uuidof(CUIAutomation), nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&automation))))
@@ -61,11 +92,14 @@ bool CWin11TaskbarDlg::GetTaskbarButtonBounds(CRect& bounds) const
     if (FAILED(buttons->get_Length(&count)))
         return false;
 
-    bool found{};
     for (int index = 0; index < count; ++index)
     {
         ComPtr<IUIAutomationElement> button;
-        if (FAILED(buttons->GetElement(index, &button)) || button == nullptr || !IsTaskbarApplicationButton(button.Get()))
+        if (FAILED(buttons->GetElement(index, &button)) || button == nullptr)
+            continue;
+
+        const TaskbarElementKind kind = GetTaskbarElementKind(button.Get());
+        if (kind == TaskbarElementKind::None)
             continue;
 
         BOOL is_offscreen{};
@@ -76,20 +110,28 @@ bool CWin11TaskbarDlg::GetTaskbarButtonBounds(CRect& bounds) const
         if (FAILED(button->get_CurrentBoundingRectangle(&rect)) || ::IsRectEmpty(&rect))
             continue;
 
-        CRect button_rect(rect);
+        CRect element_rect(rect);
         CRect intersection;
-        if (!intersection.IntersectRect(&button_rect, &m_rcTaskbar))
+        if (!intersection.IntersectRect(&element_rect, &m_rcTaskbar))
             continue;
 
-        if (!found)
-            bounds = button_rect;
-        else
-            bounds.UnionRect(&bounds, &button_rect);
-        found = true;
+        switch (kind)
+        {
+        case TaskbarElementKind::ApplicationButton:
+            AddToBounds(button_bounds, element_rect);
+            break;
+        case TaskbarElementKind::StartButton:
+            AddToBounds(start_bounds, element_rect);
+            break;
+        case TaskbarElementKind::NotificationArea:
+            AddToBounds(notify_bounds, element_rect);
+            break;
+        default:
+            break;
+        }
     }
-    return found;
+    return true;
 }
-
 void CWin11TaskbarDlg::SetFloatingAboveTaskbar(bool floating)
 {
     if (floating == m_floating_above_taskbar)
@@ -144,17 +186,30 @@ bool CWin11TaskbarDlg::ShouldFloatAboveTaskbar(const CRect& docked_rect, const C
 
 void CWin11TaskbarDlg::AdjustTaskbarWndPos(bool force_adjust)
 {
-    ::GetWindowRect(m_hNotify, m_rcNotify);
-    ::GetWindowRect(m_hStart, m_rcStart);
-    m_rcStart.MoveToXY(m_rcStart.left - m_rcTaskbar.left, m_rcStart.top - m_rcTaskbar.top);
+    m_rcNotify.SetRectEmpty();
+    m_rcStart.SetRectEmpty();
+    if (::IsWindow(m_hNotify))
+        ::GetWindowRect(m_hNotify, m_rcNotify);
+    if (::IsWindow(m_hStart))
+        ::GetWindowRect(m_hStart, m_rcStart);
+
+    CRect taskbar_button_bounds;
+    CRect automation_start_bounds;
+    CRect automation_notify_bounds;
+    const bool button_query_succeeded =
+        GetTaskbarLayout(taskbar_button_bounds, automation_start_bounds, automation_notify_bounds);
+    if (!automation_start_bounds.IsRectEmpty())
+        m_rcStart = automation_start_bounds;
+    if (!automation_notify_bounds.IsRectEmpty())
+        m_rcNotify = automation_notify_bounds;
+    if (!m_rcStart.IsRectEmpty())
+        m_rcStart.MoveToXY(m_rcStart.left - m_rcTaskbar.left, m_rcStart.top - m_rcTaskbar.top);
 
     //设置窗口大小
     m_rect.right = m_rect.left + m_window_width;
     m_rect.bottom = m_rect.top + m_window_height;
 
-    CRect taskbar_button_bounds;
-    const bool button_query_succeeded = GetTaskbarButtonBounds(taskbar_button_bounds);
-    const int taskbar_button_right = button_query_succeeded ? taskbar_button_bounds.right : 0;
+    const int taskbar_button_right = taskbar_button_bounds.IsRectEmpty() ? 0 : taskbar_button_bounds.right;
     if (force_adjust || m_rcNotify.Width() != m_last_notify_width || m_rcStart.left != m_last_start_pos
         || taskbar_button_right != m_last_taskbar_button_right
         || button_query_succeeded != m_last_taskbar_button_query_succeeded)
@@ -192,9 +247,15 @@ void CWin11TaskbarDlg::AdjustTaskbarWndPos(bool force_adjust)
         else
         {
             //靠近“开始”按钮
-            if (theApp.m_taskbar_data.tbar_wnd_snap)
+            if (theApp.m_taskbar_data.tbar_wnd_snap && !m_rcStart.IsRectEmpty())
             {
                 m_rect.MoveToX(m_rcStart.left - m_rect.Width() - 2);
+            }
+            else if (theApp.m_taskbar_data.tbar_wnd_snap)
+            {
+                // UI Automation and the legacy Start HWND may both be unavailable on
+                // a future Explorer build. Keep the window at a safe taskbar edge.
+                m_rect.MoveToX(2);
             }
             //靠近最左侧
             else
@@ -212,7 +273,8 @@ void CWin11TaskbarDlg::AdjustTaskbarWndPos(bool force_adjust)
         //注：这里加上(m_rcTaskbar.Height() - rcStart.Height())用于修正Windows11 build 22621版本后触屏设备任务栏窗口位置不正确的问题。
         //在这种情况下m_rcTaskbar的高度要大于m_rcBar的高度，正常情况下，它们的高度相同
         //但是当任务栏上没有任何图标时，m_rcBar的高度会变为0，因此使用rcStart代替
-        m_rect.MoveToY((m_rcStart.Height() - m_rect.Height()) / 2 + (m_rcTaskbar.Height() - m_rcStart.Height()) + DPI(theApp.m_taskbar_data.window_offset_top));
+        const int taskbar_content_height = m_rcStart.IsRectEmpty() ? m_rcTaskbar.Height() : m_rcStart.Height();
+        m_rect.MoveToY((taskbar_content_height - m_rect.Height()) / 2 + (m_rcTaskbar.Height() - taskbar_content_height) + DPI(theApp.m_taskbar_data.window_offset_top));
 
         const bool right_side_layout =
             !theApp.m_taskbar_data.tbar_wnd_on_left || !CWindowsSettingHelper::IsTaskbarCenterAlign();
@@ -230,7 +292,12 @@ void CWin11TaskbarDlg::InitTaskbarWnd()
 {
     m_hNotify = ::FindWindowEx(m_hTaskbar, 0, L"TrayNotifyWnd", NULL);
     m_hStart = ::FindWindowEx(m_hTaskbar, nullptr, L"Start", NULL);
-    ::GetWindowRect(m_hNotify, m_rcNotify);
+    m_rcNotify.SetRectEmpty();
+    m_rcStart.SetRectEmpty();
+    if (::IsWindow(m_hNotify))
+        ::GetWindowRect(m_hNotify, m_rcNotify);
+    if (::IsWindow(m_hStart))
+        ::GetWindowRect(m_hStart, m_rcStart);
 }
 
 void CWin11TaskbarDlg::ResetTaskbarPos()

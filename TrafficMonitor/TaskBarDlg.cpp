@@ -462,13 +462,14 @@ bool CTaskBarDlg::AdjustWindowPos(bool force_adjust)
     if (this->GetSafeHwnd() == NULL || !IsWindow(this->GetSafeHwnd()))
         return false;
 
+    if (!::IsWindow(m_hTaskbar) || !::GetWindowRect(m_hTaskbar, m_rcTaskbar))
+        return false;
+
     if (m_is_width_changed)
         force_adjust = true;
 
     if (force_adjust)
         ResetTaskbarPos();
-
-    ::GetWindowRect(m_hTaskbar, m_rcTaskbar);   //获得任务栏的矩形区域
 
     static bool last_taskbar_on_top_or_bottom;
     CheckTaskbarOnTopOrBottom();

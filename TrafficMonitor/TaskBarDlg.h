@@ -89,7 +89,7 @@ protected:
 
     virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV 支持
 
-    HWND m_hTaskbar;	//任务栏窗口句柄
+    HWND m_hTaskbar{};	//任务栏窗口句柄
     CRect m_rcTaskbar;  //任务栏的矩形区域
     CRect m_rect;		//当前窗口的矩形区域
     int m_window_width{};   //保存计算得到的窗口宽度

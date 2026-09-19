@@ -1,4 +1,4 @@
-# Windows 11 taskbar compatibility
+﻿# Windows 11 taskbar compatibility
 
 TrafficMonitor displays its taskbar window by parenting a window to `Shell_TrayWnd`. Windows 11 renders the task buttons through a XAML/WinUI island. Unlike the classic Windows 10 taskbar, Windows 11 does not publish an SDK contract that lets a third-party process reserve a horizontal segment inside the system taskbar.
 
@@ -12,7 +12,7 @@ The public Windows APIs do not provide an equivalent of the classic toolbar inse
 
 ## Implemented fallback
 
-When **Move above the taskbar when app buttons would overlap** is enabled, TrafficMonitor uses Microsoft UI Automation to read the bounding rectangles of the visible task-list and overflow buttons. It does not invoke, resize, or modify those controls.
+When **Move above the taskbar when app buttons would overlap** is enabled, TrafficMonitor uses Microsoft UI Automation to read the bounding rectangles of the visible task-list and overflow buttons. The same read-only query obtains Start and notification-area bounds when Explorer exposes them, reducing dependence on private child-window classes and fixed secondary-monitor spacing. It does not invoke, resize, or modify those controls.
 
 TrafficMonitor stays embedded while there is enough room. When the task buttons reach its intended rectangle, the same monitor window is temporarily reparented and placed immediately above the taskbar. It returns to the taskbar after enough room is available again. A small hysteresis margin prevents rapid switching at the boundary.
 

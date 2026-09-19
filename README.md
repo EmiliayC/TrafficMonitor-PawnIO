@@ -154,3 +154,5 @@ TrafficMonitor支持将信息显示到任务栏。但是TrafficMonitor默认只�
 **[点击此处查看更新日志](./UpdateLog/update_log.md)**
 
 本分支的标准版已迁移到 LibreHardwareMonitor 0.9.6，需要系统安装 PawnIO 2.0 或更新版本。构建、完整依赖打包和验证步骤见 [PawnIO 迁移说明](docs/pawnio-migration.md)。
+
+Windows 11 的任务栏、DPI、多显示器、权限和通知区兼容性审计见 [Windows 11 兼容性审计](docs/windows11-compatibility-audit.md)。

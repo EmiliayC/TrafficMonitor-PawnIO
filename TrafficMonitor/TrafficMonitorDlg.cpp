@@ -2910,6 +2910,20 @@ LRESULT CTrafficMonitorDlg::OnDisplaychange(WPARAM wParam, LPARAM lParam)
 {
     GetScreenSize();
     CheckWindowPos(true);
+    if (theApp.m_cfg_data.m_show_task_bar_wnd)
+    {
+        // Explorer may recreate or reorder secondary taskbars after the display-change
+        // notification. Reopen after a short delay so the taskbar window does not keep
+        // a stale HWND or remain attached to the wrong monitor.
+        KillTimer(RESTART_TASKBAR_TIMER);
+        SetTimer(RESTART_TASKBAR_TIMER, 500, [](HWND, UINT, UINT_PTR, DWORD) {
+            if (theApp.m_pMainWnd != nullptr && ::IsWindow(theApp.m_pMainWnd->GetSafeHwnd()))
+            {
+                theApp.m_pMainWnd->SendMessage(WM_REOPEN_TASKBAR_WND);
+                ::KillTimer(theApp.m_pMainWnd->GetSafeHwnd(), RESTART_TASKBAR_TIMER);
+            }
+        });
+    }
     return 0;
 }
 
